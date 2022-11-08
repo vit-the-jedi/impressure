@@ -1,0 +1,16 @@
+{
+  "name": "impressure-tests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Matt Vitello",
+  "license": "ISC",
+  "dependencies": {
+    "@ngneat/falso": "^6.1.0",
+    "puppeteer": "^18.0.5"
+  }
+}
