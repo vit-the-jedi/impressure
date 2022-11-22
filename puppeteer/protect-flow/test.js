@@ -22,18 +22,17 @@ const logActions = (action) => {
   ${action}`.padStart(10, " ");
   console.log(actionStr);
 };
-
+const frameObj = {};
 //config object for our script
 const config = {
   link: "https://preview.impressure.io/cdjvks65-protect-com",
   mobile: "on",
-  integrations: "off",
-  typeDelay: 0,
-  noBrowser: false,
-  slowMo: 200,
+  integrations: "on",
+  targetIntegrations: ["Mastadon", "L&C"],
+  noBrowser: true,
   fakePerson: {
     email: "puppeteerProtectTe@st.com",
-    "first name": "John",
+    "first name": "Test",
     "last name": "Test",
     "street address": {
       street: "116 test street",
@@ -43,6 +42,8 @@ const config = {
     },
     "primary phone": "2033333345",
   },
+  typeDelay: 0,
+  slowMo: 0,
 };
 //our fake data
 const fakePerson = config.fakePerson;
@@ -63,31 +64,28 @@ await page.setViewport({ width: 1280, height: 800 });
     page.waitForNavigation({ waitUntil: "domcontentloaded" }),
     logActions(`opening browser at: ${config.link} `),
   ]);
-  //enable our config settings before we start
-  await initConfig(page);
-  //type in the Impressure console command to output all of our debug messages
-  await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
 
   //get Impressure iframe (frame holds the preview page)
   //we'll need to use the Impressure frame for all clicks, value inputting, etc
   //using page. will not work
   const iframe = await page.$("#impressure-1");
   const impressureFrameContent = await iframe.contentFrame();
+  //enable our config settings before we start
+  await initConfig(page);
 
-  //call our function to check page name and make decisions based on content of each page
+  //type in the Impressure console command to output all of our debug messages
+  await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
+
   await runPageChecks();
-
   //function to do unique logic based on the different pages in the flow
   async function runPageChecks() {
-    //get the Impressure page name for each page we're actively on
-    //naming conventions across verticals are usually similar
-    //so we can rely on them to have the same content
-    const pageName = await page.evaluate(() => {
-      return document.querySelector(".pageName").textContent.toLowerCase();
-    });
+    const pageName = frameObj.pageName ?? "landing page";
+    //this is a flag for our nextPsge() function to decide if we need to click submit or not
+    let needsToSubmit = true;
+    let shouldContinue = true;
     try {
       //log the page we're on + the action being completed
-      logActions(`navigating to page: ${pageName}`);
+      logActions(`navigated to page: ${pageName}`);
       if (
         pageName.includes("zip") ||
         pageName.includes("zip code") ||
@@ -98,21 +96,20 @@ await page.setViewport({ width: 1280, height: 800 });
             "input"
           ).value = `${fakePerson["street address"].zipCode}`;
         }, fakePerson);
-
-        await nextPage();
       } else if (pageName.includes("birth year")) {
         logActions(`inputting birth year`);
         const randomYear = generateRandomYear();
+        await impressureFrameContent.evaluate(() => {
+          document.querySelector(`input`).value = "";
+        });
         await impressureFrameContent.type("input", String(randomYear), {
           delay: config.typeDelay,
         });
-        await nextPage();
       } else if (
         pageName.includes("tcpa") ||
         pageName.includes("info mobile")
       ) {
         const labels = await impressureFrameContent.$$(".form-label");
-
         //call our helper function when we have multiple text inputs
         await inputValueHelper(labels, pageName);
 
@@ -121,24 +118,23 @@ await page.setViewport({ width: 1280, height: 800 });
         try {
           if (pageName.includes("tcpa")) {
             if (config.integrations === "off") {
+              shouldContinue = false;
               logActions(
                 "closing browser, integrations are turned off in the config object."
               );
               browser.close();
-            } else {
-              await nextPage(pageName);
             }
-          } else {
-            await nextPage(pageName);
           }
         } catch (error) {
           console.log(error);
         }
       } else if (pageName.includes("offers")) {
-        await page.waitForTimeout(60000);
-        browser.close();
+        shouldContinue = false;
       } else {
-        await impressureFrameContent.$$(".radioButtons");
+        needsToSubmit = false;
+        const radios = await impressureFrameContent.waitForSelector(
+          ".radioButtons"
+        );
         //loop through our radio btn containers and click one label from each
         await impressureFrameContent.evaluate(() => {
           document.querySelectorAll(".radioButtons").forEach((radioDiv) => {
@@ -147,12 +143,13 @@ await page.setViewport({ width: 1280, height: 800 });
             elemsArray[randomIndex].click();
           });
         });
-        await runPageChecks();
       }
+      await nextPage(needsToSubmit, shouldContinue);
     } catch (error) {
       console.log(error);
     }
   }
+
   //helper function to help distinguish the values each text input needs
   //we use the input labels to make decisions for what to input
   async function inputValueHelper(labels, pageName) {
@@ -194,6 +191,10 @@ await page.setViewport({ width: 1280, height: 800 });
           value = "test";
       }
       logActions(`inputting value: ${value}`);
+      //make sure input is clear - sometimes impressure will save previous values - this will break our script and cause endless loop
+      await impressureFrameContent.evaluate((targetInputId) => {
+        document.querySelector(`#${targetInputId}`).value = "";
+      }, targetInputId);
       //tab press is workaround for puppeteer clicking Impressure email dropdown helper instead of submit btn
       //right now - you'll see impressure highlighting errors between inputs - its OK for now
       await impressureFrameContent.click(`#${targetInputId}`);
@@ -203,37 +204,47 @@ await page.setViewport({ width: 1280, height: 800 });
       //also need to remove impressure email suggestions dropdown list
       //it gets in the way of the submit btn click and causes an error
       if (labelText.includes("mail")) {
-        await impressureFrameContent.evaluate(
-          () =>
-            (document.querySelector(".suggestions__wrapper").style.display =
-              "none")
-        );
+        await impressureFrameContent
+          .waitForSelector(".suggestions")
+          .then(() => {
+            impressureFrameContent.evaluate(() => {
+              document.querySelector(".suggestions").style.display = "none";
+              document.querySelector(".validation--suggestion").style.display =
+                "none";
+            });
+          });
       }
     }
   }
 
   //click next button
-  async function nextPage(pageName = null) {
+  async function nextPage(submitButtonClickFlag, shouldContinue) {
     try {
-      const hasNextButton = await impressureFrameContent.$$(
-        '[data-behaviors="submit nextPage"]'
-      );
-      if (hasNextButton) {
-        if (hasNextButton.length > 1) {
-          await impressureFrameContent.evaluate(() => {
-            const btns = document.querySelectorAll(
-              '[data-behaviors="submit nextPage"]'
-            );
-            const randomIndex = Math.floor(Math.random() * btns.length);
-            btns[randomIndex].click();
-          });
-        } else {
-          await hasNextButton[0].click();
+      if (submitButtonClickFlag) {
+        const hasNextButton = await impressureFrameContent.$$(
+          '[data-behaviors="submit nextPage"]'
+        );
+        if (hasNextButton.length > 0) {
+          if (hasNextButton.length > 1) {
+            await impressureFrameContent.evaluate(() => {
+              const btns = document.querySelectorAll(
+                '[data-behaviors="submit nextPage"]'
+              );
+              const randomIndex = Math.floor(Math.random() * btns.length);
+              btns[randomIndex].click();
+            });
+          } else {
+            await hasNextButton[0].click();
+          }
         }
-      } else {
-        console.error("Pupetteer Test: no submit button found");
       }
-      await runPageChecks();
+      const pageNameEl = await page.$(".pageName");
+      const pageNameElText = await pageNameEl.getProperty("innerText");
+      const nameText = await pageNameElText.jsonValue();
+      frameObj.pageName = nameText.toLowerCase();
+      if (shouldContinue) {
+        await runPageChecks();
+      }
     } catch (error) {
       console.log(error);
     }
@@ -274,38 +285,52 @@ async function initConfig(page) {
 
 function logIntegrations() {
   return new Promise((resolve, reject) => {
-    try {
-      page.on("console", async (msg) => {
+    const integratonsToTarget = config.targetIntegrations;
+    let integrationsProcessed = 0;
+    page.on("console", async (msg) => {
+      try {
         let msgText = msg.text();
-        if (
-          //add any integration identifiers you want here to view
-          msgText.includes("Mastadon") ||
-          msgText.includes("L&C")
-        ) {
-          const args = msg.args();
-          const vals = [];
-          for (let i = 0; i < args.length; i++) {
-            vals.push(await args[i].jsonValue());
+        for (const integrationName of integratonsToTarget) {
+          if (msgText.includes(integrationName)) {
+            const args = msg.args();
+            const vals = [];
+            for (let i = 0; i < args.length; i++) {
+              vals.push(await args[i].jsonValue());
+            }
+
+            const cleanedVals = await cleanIntegrations(vals);
+            setTimeout(() => {
+              console.log(cleanedVals);
+              integrationsProcessed++;
+              if (
+                integrationsProcessed >=
+                config.targetIntegrations.length * 2
+              ) {
+                logActions(
+                  `closing broswer: logged target integrations ${config.targetIntegrations} post and response data.`
+                );
+                browser.close();
+              }
+            }, 1000);
           }
-          resolve(
-            vals
-              .map((v) =>
-                typeof v === "object" ? JSON.stringify(v, null, 2) : v
-              )
-              .join("\t")
-          );
-          console.log(vals);
-          console.log(
-            "info log: if integration body is empty, the lead is either rejected, or there is an issue with your page integrations."
-          );
         }
-      });
-    } catch (error) {
-      console.log(error);
-    }
+      } catch (error) {
+        console.log(error);
+      }
+    });
   });
 }
-
+const cleanIntegrations = (values) => {
+  const integrationObj = {};
+  //set integration name
+  const intergrationObjKey = values[0];
+  for (let i = 0; i < values.length; i++) {
+    if (typeof values[i] === "object") {
+      integrationObj[intergrationObjKey] = values[i];
+    }
+  }
+  return integrationObj;
+};
 // //generate random data for our test
 // const generateRandData = () => {
 //   const randData = {
