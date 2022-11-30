@@ -307,7 +307,7 @@ function logIntegrations() {
                 config.targetIntegrations.length * 2
               ) {
                 logActions(
-                  `closing broswer: logged target integrations ${config.targetIntegrations} post and response data.`
+                  `closing broswer: logged target integrations ${config.targetIntegrations} post and ${config.targetIntegrations} response data.`
                 );
                 browser.close();
               }
@@ -325,8 +325,18 @@ const cleanIntegrations = (values) => {
   //set integration name
   const intergrationObjKey = values[0];
   for (let i = 0; i < values.length; i++) {
-    if (typeof values[i] === "object") {
-      integrationObj[intergrationObjKey] = values[i];
+    const objValue = values[i];
+    if (typeof objValue === "object") {
+      // integrationObj[intergrationObjKey] = values[i];
+      // const objToString = JSON.stringify(values[i], null, 2);
+      // integrationObj[intergrationObjKey] = objToString;
+
+      for (const [key, value] of Object.entries(objValue)) {
+        if (typeof value === "object") {
+          objValue[key] = JSON.stringify(value, null, 2).replaceAll(/\\n/g, "");
+        }
+      }
+      integrationObj[intergrationObjKey] = objValue;
     }
   }
   return integrationObj;
