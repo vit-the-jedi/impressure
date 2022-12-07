@@ -29,7 +29,7 @@ const config = {
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
-  noBrowser: false,
+  noBrowser: true,
   fakePerson: {
     email: "puppeteerProtectTe@st.com",
     "first name": "Test",
