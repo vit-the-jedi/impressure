@@ -115,6 +115,10 @@ await page.setViewport({ width: 1280, height: 800 });
         await impressureFrameContent.type("input", String(randomYear), {
           delay: config.typeDelay,
         });
+        //remove focus (good for testing DOB autocomplete)
+        await impressureFrameContent.evaluate(() => {
+          document.querySelector(`input`).blur();
+        });
       } else if (
         pageName.includes("tcpa") ||
         pageName.includes("info mobile")
