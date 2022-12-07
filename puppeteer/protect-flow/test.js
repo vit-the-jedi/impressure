@@ -211,13 +211,13 @@ await page.setViewport({ width: 1280, height: 800 });
       await impressureFrameContent.evaluate((targetInputId) => {
         document.querySelector(`#${targetInputId}`).value = "";
       }, targetInputId);
-      //tab press is workaround for puppeteer clicking Impressure email dropdown helper instead of submit btn
-      //right now - you'll see impressure highlighting errors between inputs - its OK for now
+      //click the input
       await impressureFrameContent.click(`#${targetInputId}`);
+      //enter the associated value
       await impressureFrameContent.type(`#${targetInputId}`, value, {
         delay: config.typeDelay,
       });
-      //also need to remove impressure email suggestions dropdown list
+      //also need to remove impressure email suggestions dropdown lists
       //it gets in the way of the submit btn click and causes an error
       if (labelText.includes("mail")) {
         await impressureFrameContent
@@ -236,6 +236,7 @@ await page.setViewport({ width: 1280, height: 800 });
   //click next button
   async function nextPage(submitButtonClickFlag, shouldContinue) {
     try {
+      //check our flag to ensure that we need to click a submit button
       if (submitButtonClickFlag) {
         const hasNextButton = await impressureFrameContent.$$(
           '[data-behaviors="submit nextPage"]'
@@ -254,6 +255,7 @@ await page.setViewport({ width: 1280, height: 800 });
           }
         }
       }
+      //if we want to continue, get the new page name we navigated to
       if (shouldContinue) {
         const pageName = await getPageName();
         //log the page we're on + the action being completed
@@ -297,7 +299,9 @@ async function initConfig(page) {
     logActions("turning integrations on");
   }
 }
-
+//function that watched the console logs for the integrations responses we need
+//this function is called at the beginning of the app, and therefore watches every console log
+//you can access all logs from here, but we are currently only concerned with integration logs
 function logIntegrations() {
   return new Promise((resolve, reject) => {
     const integratonsToTarget = config.targetIntegrations;
@@ -342,10 +346,6 @@ const cleanIntegrations = (values) => {
   for (let i = 0; i < values.length; i++) {
     const objValue = values[i];
     if (typeof objValue === "object") {
-      // integrationObj[intergrationObjKey] = values[i];
-      // const objToString = JSON.stringify(values[i], null, 2);
-      // integrationObj[intergrationObjKey] = objToString;
-
       for (const [key, value] of Object.entries(objValue)) {
         if (typeof value === "object") {
           objValue[key] = JSON.stringify(value, null, 2).replace(/\\n/g, "");
