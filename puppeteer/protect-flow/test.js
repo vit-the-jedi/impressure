@@ -15,7 +15,7 @@ import {
 import { link, linkSync } from "fs";
 import { resolve } from "path";
 
-const logActions = (action) => {
+const logActions = async (action) => {
   const actionStr = `
   -------------------------
   COMPLETING ACTION:
@@ -29,7 +29,7 @@ const config = {
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
-  noBrowser: true,
+  noBrowser: false,
   fakePerson: {
     email: "puppeteerProtectTe@st.com",
     "first name": "Test",
@@ -77,15 +77,25 @@ await page.setViewport({ width: 1280, height: 800 });
   await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
 
   await runPageChecks();
+
+  async function getPageName() {
+    try {
+      const pageNameEl = await page.$(".pageName");
+      const pageNameElText = await pageNameEl.getProperty("innerText");
+      const nameText = await pageNameElText.jsonValue();
+      const newPageName = nameText.toLowerCase();
+      return newPageName;
+    } catch (error) {
+      console.log(error);
+    }
+  }
   //function to do unique logic based on the different pages in the flow
   async function runPageChecks() {
-    const pageName = frameObj.pageName ?? "landing page";
+    const pageName = await getPageName();
     //this is a flag for our nextPsge() function to decide if we need to click submit or not
     let needsToSubmit = true;
     let shouldContinue = true;
     try {
-      //log the page we're on + the action being completed
-      logActions(`navigated to page: ${pageName}`);
       if (
         pageName.includes("zip") ||
         pageName.includes("zip code") ||
@@ -132,19 +142,25 @@ await page.setViewport({ width: 1280, height: 800 });
         shouldContinue = false;
       } else {
         needsToSubmit = false;
-        const radios = await impressureFrameContent.waitForSelector(
-          ".radioButtons"
-        );
-        //loop through our radio btn containers and click one label from each
-        await impressureFrameContent.evaluate(() => {
-          document.querySelectorAll(".radioButtons").forEach((radioDiv) => {
-            const elemsArray = radioDiv.querySelectorAll("label");
-            const randomIndex = Math.floor(Math.random() * elemsArray.length);
-            elemsArray[randomIndex].click();
+        await impressureFrameContent
+          .waitForSelector(".radioButtons")
+          .then((radios) => {
+            //loop through our radio btn containers and click one label from each
+            impressureFrameContent.evaluate(() => {
+              document.querySelectorAll(".radioButtons").forEach((radioDiv) => {
+                const elemsArray = radioDiv.querySelectorAll("label");
+                const randomIndex = Math.floor(
+                  Math.random() * elemsArray.length
+                );
+                elemsArray[randomIndex].click();
+              });
+            });
+          })
+          .catch((error) => {
+            console.log(error);
           });
-        });
       }
-      await nextPage(needsToSubmit, shouldContinue);
+      nextPage(needsToSubmit, shouldContinue);
     } catch (error) {
       console.log(error);
     }
@@ -238,11 +254,10 @@ await page.setViewport({ width: 1280, height: 800 });
           }
         }
       }
-      const pageNameEl = await page.$(".pageName");
-      const pageNameElText = await pageNameEl.getProperty("innerText");
-      const nameText = await pageNameElText.jsonValue();
-      frameObj.pageName = nameText.toLowerCase();
       if (shouldContinue) {
+        const pageName = await getPageName();
+        //log the page we're on + the action being completed
+        await logActions(`navigating to page: ${pageName}`);
         await runPageChecks();
       }
     } catch (error) {
@@ -333,7 +348,7 @@ const cleanIntegrations = (values) => {
 
       for (const [key, value] of Object.entries(objValue)) {
         if (typeof value === "object") {
-          objValue[key] = JSON.stringify(value, null, 2).replaceAll(/\\n/g, "");
+          objValue[key] = JSON.stringify(value, null, 2).replace(/\\n/g, "");
         }
       }
       integrationObj[intergrationObjKey] = objValue;
