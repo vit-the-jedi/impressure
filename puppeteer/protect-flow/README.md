@@ -8,12 +8,13 @@
     <ol>
     <li><a href="#the-terminal">The Terminal</a></li>
     <li><a href="#installing-xcode">Installing Xcode</a></li>
-    <li><a href="#installing-node-and npm">Installing Node and NPM</a></li>
-    <li><a href="#git">Git</a></li>
-    <li><a href="#final-step!">Final Step!</a></li>
+    <li><a href="#installing-node-and-npm">Installing Node and NPM</a></li>
+    <li><a href="#git">Installing Git</a></li>
     </ol>
     </li>
     <li><a href="#configuring-your-tests">Configuring Your Tests</a></li>
+    <li><a href="#running-a-test">Running a 
+    Test</a></li>
 </ol>
 
 ## Intro
@@ -53,7 +54,7 @@ This will check to see if a version is installed - if you get a response similar
 xcode-select version 2384
 ```
 
-then you can skip this step.
+then you can skip to <a href="#installing-node-and-npm">step 3</a>.
 
 If you see a response similar to
 
@@ -81,7 +82,7 @@ you should get the version back instead of an error.
 </li>
 
 <li>
-<h3 id="installing-node-and npm">Installing Node and NPM</h3>
+<h3 id="installing-node-and-npm">Installing Node and NPM</h3>
 
 We've talked about Node.js, but NPM is still a stranger, right? NPM is just an extension for Node.js, that allows you to download certain tools, like Puppeteer, for example. Using NPM makes it really easy to run the script with minimal manual steps.
 
@@ -97,16 +98,18 @@ if this doesn't work (you'll see an error message in your terminal), you may nee
 sudo npm install -g npm
 ```
 
+You may be prompted for a password in your terminal. This is the password that logs you into your machine. You'll notice that when you are typing, it doesnt look like anything is entered into your Terminal, that's ok, just type your password normally and hit Enter. If typed correctly, Terminal will begin running your command.
+
 Once complete, run
 
 ```
-npm -v
+npm --v
 ```
 
 or
 
 ```
-npm -version
+npm --version
 ```
 
 you should get an output of a version number, meaning NPM is installed properly.
@@ -115,7 +118,7 @@ you should get an output of a version number, meaning NPM is installed properly.
 </li>
 
 <li>
-<h3 id="git">Git</h3>
+<h3 id="git">Installing Git</h3>
 
 If you've made it this far, we're almost done! Last step is to grab the code from the repository so we can use the script. First, you'll need to choose a place in your computer where the files will be. Something like Documents/sites/ - or whatever you like. Once you have your folder created/chosen. Open up your Terminal.
 
@@ -140,26 +143,6 @@ you'll see Terminal working some magic, and once it's done you should have the f
 
 </li>
 
-<li>
-<h3 id="final-step!">Final Step!</h3>
-
-All that's left to do now, is target the folder in Terminal that contains the script you want to run, for example Path/To/Your/Folder/impressure/puppeteer/protect-flow
-
-Once you've targeted it by running
-
-```
-cd Path/To/Your/Folder/impressure/puppeteer/TargetFolder
-```
-
-in your Terminal, paste and run the following into your terminal, and you'll see the script running in the background and submitting a test lead!
-
-```
-node test.js
-```
-
-<br/>
-
-</li>
 </ol>
 
 ## Configuring Your Tests
@@ -306,6 +289,32 @@ Change this property to slow down the speed at which puppeteer types in values, 
 
 Change this property to slow down the speed at which the script executes, in milliseconds. The higher the value, the longer the delay between each action.
 
-It's only recommended to change this setting if you are also setting <a href="config-noBrowser">noBrowser</a> to false.
+It's only recommended to change this setting if you are also setting <a href="#config-noBrowser">noBrowser</a> to false.
+<br/>
+<br/>
 
 </li>
+
+## Running a Test
+
+All that's left to do now, is target the folder in Terminal that contains the script you want to run, for example Path/To/Your/Folder/impressure/puppeteer/protect-flow
+
+Once you've targeted it by running the following in your Terminal,
+
+```
+cd Path/To/Your/Folder/impressure/puppeteer/TargetFolder
+```
+
+paste and run the command below to ensure we have the most up-to-date version of the code:
+
+```
+git pull
+```
+
+Once that is complete, paste the following in your Terminal, and you'll see the script running and submitting a test lead! 🎉
+
+```
+node test.js
+```
+
+<br/>
