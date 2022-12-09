@@ -149,6 +149,13 @@ git clone https://github.com/vit-the-jedi/impressure.git
 ```
 
 you'll see Terminal working some magic, and once it's done you should have the folders + files in the folder you chose.
+
+Lastly, we'll need to have npm grab all the dependencies we need. Let's run
+
+```
+npm i
+```
+
 <br/>
 
 </li>
@@ -319,12 +326,6 @@ paste and run the command below to ensure we have the most up-to-date version of
 
 ```
 git pull
-```
-
-Lastly, we'll need to have npm grab all the dependencies we need. Let's run
-
-```
-npm i
 ```
 
 Once that is complete, paste the following in your Terminal, and you'll see the script running and submitting a test lead! 🎉
