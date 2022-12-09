@@ -86,7 +86,17 @@ you should get the version back instead of an error.
 
 We've talked about Node.js, but NPM is still a stranger, right? NPM is just an extension for Node.js, that allows you to download certain tools, like Puppeteer, for example. Using NPM makes it really easy to run the script with minimal manual steps.
 
-To install, simply run
+First, you'll need to <a href="https://nodejs.org/en/download/" target="_blank">install node.js</a> on your machine. Choose the macOS installer and follow the prompts.
+
+Check your installation was done properly by pasting
+
+```
+node --version
+```
+
+into your terminal and hitting enter. Your terminal should return a version number.
+
+Next, let's install npm, which will allow us to download Puppeteer. To install npm, simply run
 
 ```
 npm install -g npm
