@@ -29,7 +29,7 @@ const config = {
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
-  noBrowser: true,
+  noBrowser: false,
   fakePerson: {
     email: "puppeteerProtectTe@st.com",
     "first name": "Test",
@@ -211,10 +211,6 @@ await page.setViewport({ width: 1280, height: 800 });
           value = "test";
       }
       logActions(`inputting value: ${value}`);
-      //make sure input is clear - sometimes impressure will save previous values - this will break our script and cause endless loop
-      await impressureFrameContent.evaluate((targetInputId) => {
-        document.querySelector(`#${targetInputId}`).value = "";
-      }, targetInputId);
       //click the input
       await impressureFrameContent.click(`#${targetInputId}`);
       //enter the associated value
@@ -227,10 +223,16 @@ await page.setViewport({ width: 1280, height: 800 });
         await impressureFrameContent
           .waitForSelector(".suggestions")
           .then(() => {
+            //if impressure shows the emaill address suggestions, we can hit the escape key to remove the list
+            page.keyboard.press("Escape");
+            //then we need to check if the validation message is there
             impressureFrameContent.evaluate(() => {
-              document.querySelector(".suggestions").style.display = "none";
-              document.querySelector(".validation--suggestion").style.display =
-                "none";
+              const validationMsg = document.querySelector(
+                `.validation--suggestion`
+              );
+              if (validationMsg)
+                //if it is, click the "no" option in the validate message - allows us to keep the email we typed in
+                validationMsg.querySelectorAll("button")[1].click();
             });
           });
       }
