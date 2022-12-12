@@ -29,7 +29,7 @@ const config = {
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
-  noBrowser: true,
+  noBrowser: false,
   fakePerson: {
     email: "puppeteerProtectTe@st.com",
     "first name": "Test",
@@ -74,7 +74,11 @@ await page.setViewport({ width: 1280, height: 800 });
   await initConfig(page);
 
   //type in the Impressure console command to output all of our debug messages
-  await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
+  try {
+    await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
+  } catch (error) {
+    console.log("This link does not support Impressure logs to the console");
+  }
 
   await runPageChecks();
 
@@ -86,7 +90,9 @@ await page.setViewport({ width: 1280, height: 800 });
       const newPageName = nameText.toLowerCase();
       return newPageName;
     } catch (error) {
-      console.log(error);
+      console.log(
+        `Currently, only impressure preview links are supported, see https://github.com/vit-the-jedi/impressure/issues/18 for status on non-impressure preview link support.`
+      );
     }
   }
   //function to do unique logic based on the different pages in the flow
@@ -101,11 +107,14 @@ await page.setViewport({ width: 1280, height: 800 });
         pageName.includes("zip code") ||
         pageName.includes("landing page")
       ) {
-        await impressureFrameContent.evaluate((fakePerson) => {
-          document.querySelector(
-            "input"
-          ).value = `${fakePerson["street address"].zipCode}`;
-        }, fakePerson);
+        const zipInput = await impressureFrameContent.$("input");
+        await impressureFrameContent.evaluate((el) => {
+          el.value = "";
+        }, zipInput);
+        await zipInput.click();
+        await zipInput.type(`${fakePerson["street address"].zipCode}`, {
+          delay: config.typeDelay,
+        });
       } else if (pageName.includes("birth year")) {
         logActions(`inputting birth year`);
         const randomYear = generateRandomYear();
@@ -115,6 +124,28 @@ await page.setViewport({ width: 1280, height: 800 });
         await impressureFrameContent.type("input", String(randomYear), {
           delay: config.typeDelay,
         });
+        //remove focus (good for testing DOB autocomplete)
+        await impressureFrameContent.evaluate(() => {
+          document.querySelector(`input`).blur();
+        });
+      } else if (pageName.includes("birthdate full")) {
+        logActions(`inputting full birth date`);
+        const randomDOBVals = [
+          generateRandomDOBValue("month"),
+          generateRandomDOBValue("day"),
+          generateRandomDOBValue("year"),
+        ];
+        const inputs = await impressureFrameContent.$$("input");
+
+        for (const [i, input] of inputs.entries()) {
+          await impressureFrameContent.evaluate((el) => {
+            el.value = "";
+          }, input);
+          await input.click();
+          await input.type(String(randomDOBVals[i]), {
+            delay: config.typeDelay,
+          });
+        }
         //remove focus (good for testing DOB autocomplete)
         await impressureFrameContent.evaluate(() => {
           document.querySelector(`input`).blur();
@@ -144,21 +175,24 @@ await page.setViewport({ width: 1280, height: 800 });
         }
       } else if (pageName.includes("offers")) {
         shouldContinue = false;
+      } else if (pageName.includes("vehicle")) {
+        needsToSubmit = false;
+        await impressureFrameContent
+          .waitForSelector(".formQuestionRadio")
+          .then(() => {
+            //function to look through the given selector for the radio buttons
+            radioButtonHandler(".formQuestionRadio");
+          })
+          .catch((error) => {
+            console.log(error);
+          });
       } else {
         needsToSubmit = false;
         await impressureFrameContent
           .waitForSelector(".radioButtons")
-          .then((radios) => {
-            //loop through our radio btn containers and click one label from each
-            impressureFrameContent.evaluate(() => {
-              document.querySelectorAll(".radioButtons").forEach((radioDiv) => {
-                const elemsArray = radioDiv.querySelectorAll("label");
-                const randomIndex = Math.floor(
-                  Math.random() * elemsArray.length
-                );
-                elemsArray[randomIndex].click();
-              });
-            });
+          .then(() => {
+            //function to look through the given selector for the radio buttons
+            radioButtonHandler(".radioButtons");
           })
           .catch((error) => {
             console.log(error);
@@ -211,10 +245,6 @@ await page.setViewport({ width: 1280, height: 800 });
           value = "test";
       }
       logActions(`inputting value: ${value}`);
-      //make sure input is clear - sometimes impressure will save previous values - this will break our script and cause endless loop
-      await impressureFrameContent.evaluate((targetInputId) => {
-        document.querySelector(`#${targetInputId}`).value = "";
-      }, targetInputId);
       //click the input
       await impressureFrameContent.click(`#${targetInputId}`);
       //enter the associated value
@@ -227,14 +257,33 @@ await page.setViewport({ width: 1280, height: 800 });
         await impressureFrameContent
           .waitForSelector(".suggestions")
           .then(() => {
+            //if impressure shows the emaill address suggestions, we can hit the escape key to remove the list
+            page.keyboard.press("Escape");
+            //then we need to check if the validation message is there
             impressureFrameContent.evaluate(() => {
-              document.querySelector(".suggestions").style.display = "none";
-              document.querySelector(".validation--suggestion").style.display =
-                "none";
+              const validationMsg = document.querySelector(
+                `.validation--suggestion`
+              );
+              if (validationMsg)
+                //if it is, click the "no" option in the validate message - allows us to keep the email we typed in
+                validationMsg.querySelectorAll("button")[1].click();
             });
           });
       }
     }
+  }
+  function radioButtonHandler(selector) {
+    //loop through our radio btn containers and click one label from each
+    impressureFrameContent.evaluate((selector) => {
+      document.querySelectorAll(selector).forEach((selectorDiv) => {
+        //get labels regardless of class or id
+        const labelsArray = selectorDiv.querySelectorAll("label");
+        if (labelsArray) {
+          const randomIndex = Math.floor(Math.random() * labelsArray.length);
+          labelsArray[randomIndex].click();
+        }
+      });
+    }, selector);
   }
 
   //click next button
@@ -272,25 +321,38 @@ await page.setViewport({ width: 1280, height: 800 });
   }
 })().catch((err) => console.error(err));
 
-const generateRandomYear = () => {
-  const minYear = 1922;
-  const randNumToAdd = Math.floor(Math.random() * 80);
-  return minYear + randNumToAdd;
+const generateRandomDOBValue = (type) => {
+  let minValue = 1;
+  let randNumToAdd;
+  if (type === "day") {
+    randNumToAdd = Math.floor(Math.random() * 29);
+  } else if (type === "month") {
+    randNumToAdd = Math.floor(Math.random() * 11);
+  } else if (type === "year") {
+    minValue = 1922;
+    randNumToAdd = Math.floor(Math.random() * 80);
+  }
+  return minValue + randNumToAdd;
 };
 
 //read our configs and set up the page before we start
 async function initConfig(page) {
   if (config.mobile === "on") {
-    const element = await page.$(".zmdi-smartphone");
-    const parent_node = await element.getProperty("parentNode");
-    const classList = await page.evaluate((parent_node) => {
-      return parent_node.classList;
-    }, parent_node);
-    for (const value of Object.values(classList)) {
-      if (value === "toolbarPreview--disabled") {
-        await parent_node.click();
+    try {
+      const element = await page.$(".zmdi-smartphone");
+      const parent_node = await element.getProperty("parentNode");
+      const classList = await page.evaluate((parent_node) => {
+        return parent_node.classList;
+      }, parent_node);
+      for (const value of Object.values(classList)) {
+        if (value === "toolbarPreview--disabled") {
+          await parent_node.click();
+        }
       }
+    } catch (error) {
+      console.log(error);
     }
+
     logActions("switching to mobile");
   }
   if (config.integrations === "on") {
