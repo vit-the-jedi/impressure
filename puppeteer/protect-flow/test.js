@@ -117,7 +117,7 @@ await page.setViewport({ width: 1280, height: 800 });
         });
       } else if (pageName.includes("birth year")) {
         logActions(`inputting birth year`);
-        const randomYear = generateRandomYear();
+        const randomYear = generateRandomDOBValue("year");
         await impressureFrameContent.evaluate(() => {
           document.querySelector(`input`).value = "";
         });
