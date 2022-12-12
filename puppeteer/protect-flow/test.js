@@ -101,11 +101,19 @@ await page.setViewport({ width: 1280, height: 800 });
         pageName.includes("zip code") ||
         pageName.includes("landing page")
       ) {
-        await impressureFrameContent.evaluate((fakePerson) => {
-          document.querySelector(
-            "input"
-          ).value = `${fakePerson["street address"].zipCode}`;
-        }, fakePerson);
+        const zipInput = await impressureFrameContent.$("input");
+        await impressureFrameContent.evaluate((el) => {
+          el.value = "";
+        }, zipInput);
+        await zipInput.click();
+        await zipInput.type(`${fakePerson["street address"].zipCode}`, {
+          delay: 500,
+        });
+        // await impressureFrameContent.evaluate((fakePerson) => {
+        //   document.querySelector(
+        //     "input"
+        //   ).value = `${fakePerson["street address"].zipCode}`;
+        // }, fakePerson);
       } else if (pageName.includes("birth year")) {
         logActions(`inputting birth year`);
         const randomYear = generateRandomYear();
@@ -126,10 +134,6 @@ await page.setViewport({ width: 1280, height: 800 });
           generateRandomDOBValue("day"),
           generateRandomDOBValue("year"),
         ];
-        const dobInputs = await impressureFrameContent.$$("input");
-        // await impressureFrameContent.type("input", String(randomYear), {
-        //   delay: config.typeDelay,
-        // });
         const inputs = await impressureFrameContent.$$("input");
 
         for (const [i, input] of inputs.entries()) {
