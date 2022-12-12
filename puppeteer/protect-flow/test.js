@@ -25,7 +25,7 @@ const logActions = async (action) => {
 const frameObj = {};
 //config object for our script
 const config = {
-  link: "https://preview.impressure.io/quotes-sharperinsurance-com",
+  link: "https://easy.quotza.com",
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
@@ -74,7 +74,11 @@ await page.setViewport({ width: 1280, height: 800 });
   await initConfig(page);
 
   //type in the Impressure console command to output all of our debug messages
-  await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
+  try {
+    await page.evaluate(() => console.log(Impressure.enableLogging("debug")));
+  } catch (error) {
+    console.log("This link does not support Impressure logs to the console");
+  }
 
   await runPageChecks();
 
@@ -86,7 +90,9 @@ await page.setViewport({ width: 1280, height: 800 });
       const newPageName = nameText.toLowerCase();
       return newPageName;
     } catch (error) {
-      console.log(error);
+      console.log(
+        `Currently, only impressure preview links are supported, see https://github.com/vit-the-jedi/impressure/issues/18 for status on non-impressure preview link support.`
+      );
     }
   }
   //function to do unique logic based on the different pages in the flow
@@ -107,13 +113,8 @@ await page.setViewport({ width: 1280, height: 800 });
         }, zipInput);
         await zipInput.click();
         await zipInput.type(`${fakePerson["street address"].zipCode}`, {
-          delay: 500,
+          delay: config.typeDelay,
         });
-        // await impressureFrameContent.evaluate((fakePerson) => {
-        //   document.querySelector(
-        //     "input"
-        //   ).value = `${fakePerson["street address"].zipCode}`;
-        // }, fakePerson);
       } else if (pageName.includes("birth year")) {
         logActions(`inputting birth year`);
         const randomYear = generateRandomYear();
@@ -142,7 +143,7 @@ await page.setViewport({ width: 1280, height: 800 });
           }, input);
           await input.click();
           await input.type(String(randomDOBVals[i]), {
-            delay: 500,
+            delay: config.typeDelay,
           });
         }
         //remove focus (good for testing DOB autocomplete)
@@ -321,35 +322,37 @@ await page.setViewport({ width: 1280, height: 800 });
 })().catch((err) => console.error(err));
 
 const generateRandomDOBValue = (type) => {
-  let minValue;
+  let minValue = 1;
   let randNumToAdd;
   if (type === "day") {
-    minValue = 0;
-    randNumToAdd = Math.floor(Math.random() * 30);
+    randNumToAdd = Math.floor(Math.random() * 29);
   } else if (type === "month") {
-    minValue = 0;
-    randNumToAdd = Math.floor(Math.random() * 12);
+    randNumToAdd = Math.floor(Math.random() * 11);
   } else if (type === "year") {
     minValue = 1922;
     randNumToAdd = Math.floor(Math.random() * 80);
   }
-  console.log(minValue + randNumToAdd);
   return minValue + randNumToAdd;
 };
 
 //read our configs and set up the page before we start
 async function initConfig(page) {
   if (config.mobile === "on") {
-    const element = await page.$(".zmdi-smartphone");
-    const parent_node = await element.getProperty("parentNode");
-    const classList = await page.evaluate((parent_node) => {
-      return parent_node.classList;
-    }, parent_node);
-    for (const value of Object.values(classList)) {
-      if (value === "toolbarPreview--disabled") {
-        await parent_node.click();
+    try {
+      const element = await page.$(".zmdi-smartphone");
+      const parent_node = await element.getProperty("parentNode");
+      const classList = await page.evaluate((parent_node) => {
+        return parent_node.classList;
+      }, parent_node);
+      for (const value of Object.values(classList)) {
+        if (value === "toolbarPreview--disabled") {
+          await parent_node.click();
+        }
       }
+    } catch (error) {
+      console.log(error);
     }
+
     logActions("switching to mobile");
   }
   if (config.integrations === "on") {
