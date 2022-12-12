@@ -25,7 +25,7 @@ const logActions = async (action) => {
 const frameObj = {};
 //config object for our script
 const config = {
-  link: "https://preview.impressure.io/cdjvks65-protect-com",
+  link: "https://preview.impressure.io/quotes-sharperinsurance-com",
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
@@ -119,6 +119,32 @@ await page.setViewport({ width: 1280, height: 800 });
         await impressureFrameContent.evaluate(() => {
           document.querySelector(`input`).blur();
         });
+      } else if (pageName.includes("birthdate full")) {
+        logActions(`inputting full birth date`);
+        const randomDOBVals = [
+          generateRandomDOBValue("month"),
+          generateRandomDOBValue("day"),
+          generateRandomDOBValue("year"),
+        ];
+        const dobInputs = await impressureFrameContent.$$("input");
+        // await impressureFrameContent.type("input", String(randomYear), {
+        //   delay: config.typeDelay,
+        // });
+        const inputs = await impressureFrameContent.$$("input");
+
+        for (const [i, input] of inputs.entries()) {
+          await impressureFrameContent.evaluate((el) => {
+            el.value = "";
+          }, input);
+          await input.click();
+          await input.type(String(randomDOBVals[i]), {
+            delay: 500,
+          });
+        }
+        //remove focus (good for testing DOB autocomplete)
+        await impressureFrameContent.evaluate(() => {
+          document.querySelector(`input`).blur();
+        });
       } else if (
         pageName.includes("tcpa") ||
         pageName.includes("info mobile")
@@ -144,21 +170,24 @@ await page.setViewport({ width: 1280, height: 800 });
         }
       } else if (pageName.includes("offers")) {
         shouldContinue = false;
+      } else if (pageName.includes("vehicle")) {
+        needsToSubmit = false;
+        await impressureFrameContent
+          .waitForSelector(".formQuestionRadio")
+          .then(() => {
+            //function to look through the given selector for the radio buttons
+            radioButtonHandler(".formQuestionRadio");
+          })
+          .catch((error) => {
+            console.log(error);
+          });
       } else {
         needsToSubmit = false;
         await impressureFrameContent
           .waitForSelector(".radioButtons")
-          .then((radios) => {
-            //loop through our radio btn containers and click one label from each
-            impressureFrameContent.evaluate(() => {
-              document.querySelectorAll(".radioButtons").forEach((radioDiv) => {
-                const elemsArray = radioDiv.querySelectorAll("label");
-                const randomIndex = Math.floor(
-                  Math.random() * elemsArray.length
-                );
-                elemsArray[randomIndex].click();
-              });
-            });
+          .then(() => {
+            //function to look through the given selector for the radio buttons
+            radioButtonHandler(".radioButtons");
           })
           .catch((error) => {
             console.log(error);
@@ -238,6 +267,19 @@ await page.setViewport({ width: 1280, height: 800 });
       }
     }
   }
+  function radioButtonHandler(selector) {
+    //loop through our radio btn containers and click one label from each
+    impressureFrameContent.evaluate((selector) => {
+      document.querySelectorAll(selector).forEach((selectorDiv) => {
+        //get labels regardless of class or id
+        const labelsArray = selectorDiv.querySelectorAll("label");
+        if (labelsArray) {
+          const randomIndex = Math.floor(Math.random() * labelsArray.length);
+          labelsArray[randomIndex].click();
+        }
+      });
+    }, selector);
+  }
 
   //click next button
   async function nextPage(submitButtonClickFlag, shouldContinue) {
@@ -274,10 +316,21 @@ await page.setViewport({ width: 1280, height: 800 });
   }
 })().catch((err) => console.error(err));
 
-const generateRandomYear = () => {
-  const minYear = 1922;
-  const randNumToAdd = Math.floor(Math.random() * 80);
-  return minYear + randNumToAdd;
+const generateRandomDOBValue = (type) => {
+  let minValue;
+  let randNumToAdd;
+  if (type === "day") {
+    minValue = 0;
+    randNumToAdd = Math.floor(Math.random() * 30);
+  } else if (type === "month") {
+    minValue = 0;
+    randNumToAdd = Math.floor(Math.random() * 12);
+  } else if (type === "year") {
+    minValue = 1922;
+    randNumToAdd = Math.floor(Math.random() * 80);
+  }
+  console.log(minValue + randNumToAdd);
+  return minValue + randNumToAdd;
 };
 
 //read our configs and set up the page before we start
