@@ -25,7 +25,7 @@ const logActions = async (action) => {
 const frameObj = {};
 //config object for our script
 const config = {
-  link: "https://easy.quotza.com",
+  link: "https://preview.impressure.io/cdjvks65-protect-com",
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
