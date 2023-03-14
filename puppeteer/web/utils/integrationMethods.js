@@ -1,44 +1,35 @@
 const { resolve } = require("path");
 
 const logIntegrations = async (config, page) => {
+    const responses = [];
     return new Promise((resolve, reject) => {
-        const integratonsToTarget = config.targetIntegrations;
         let integrationsProcessed = 0;
         page.on("console", async (msg) => {
             try {
                 let msgText = msg.text();
-                console.log(msgText);
-                for (const integrationName of integratonsToTarget) {
-                    if (msgText.includes(integrationName)) {
-                        const args = msg.args();
-                        const vals = [];
-                        for (let i = 0; i < args.length; i++) {
-                            vals.push(await args[i].jsonValue());
-                        }
-
-                        const cleanedVals = await cleanIntegrations(vals);
-                        responses.push(cleanedVals);
-                        integrationsProcessed++;
-                        if (
-                            integrationsProcessed >=
-                            config.targetIntegrations.length * 2
-                        ) {
-                            logActions(
-                                `closing browser: logged target integrations ${config.targetIntegrations} post and ${config.targetIntegrations} response data.`
-                            );
-                            resolve(responses);
-                        }
-                    } else {
-                        return;
-                    }
+                const args = msg.args();
+                const vals = [];
+                for (let i = 0; i < args.length; i++) {
+                    vals.push(await args[i].jsonValue());
                 }
+
+                const cleanedVals = await cleanIntegrations(vals);
+                responses.push(cleanedVals);
+                console.log(responses);
+                // integrationsProcessed++;
+                // if (
+                //     integrationsProcessed >=
+                //     config.targetIntegrations.length * 2
+                // ) {
+                //     logActions(
+                //         `closing browser: logged target integrations ${config.targetIntegrations} post and ${config.targetIntegrations} response data.`
+                //     );
+                //     resolve(responses);
+                // }
             } catch (error) {
                 console.log(error);
             }
         });
-    }).then((res) => {
-        console.log(res);
-        return callback(res);
     });
 };
 const cleanIntegrations = (values) => {

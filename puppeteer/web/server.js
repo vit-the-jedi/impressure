@@ -29,8 +29,9 @@ const config = {
 app.get("/", (req, res) => {
     const pageIntegrationResponses = new Promise((resolve, reject) => {
         scraper
-            .submitForm(config)
+            .controller(config)
             .then((data) => {
+                console.log("resolved on server" + data);
                 resolve(data);
             })
             .catch((err) => {
@@ -38,12 +39,12 @@ app.get("/", (req, res) => {
                 reject("Impressure scrape failed");
             })
             .then((data) => {
-                res.render("index", {
-                    data: { articles: data[0], videos: data[1] },
-                });
+                // res.render("index", {
+                //     data: { articles: data[0], videos: data[1] },
+                // });
             })
             .catch((err) => res.status(500).send(err));
     });
 });
 
-app.listen(process.env.PORT || 1000);
+app.listen(process.env.PORT || 2000);
