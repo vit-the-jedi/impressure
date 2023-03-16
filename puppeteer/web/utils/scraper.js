@@ -122,6 +122,7 @@ const runPageChecks = async (config, name, page, impressureFrameContent) => {
         pageLogicObj.submit = true;
         return pageLogicObj;
     } else if (name.includes("tcpa") || name.includes("info mobile")) {
+        await browser.close();
         const labels = await impressureFrameContent.$$(".form-label");
         //call our helper function when we have multiple text inputs
         await inputValueHelper(

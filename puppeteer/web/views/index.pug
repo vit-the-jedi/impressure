@@ -1,20 +1,40 @@
 html
   head
-    title Scraped Headless Browser Resources
-  body
-    h1 Latest Headless Browser Resources
+    title=title
+    link(href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous")
+    link(rel='stylesheet', href="./public/css/main.css")
 
-    h3 Medium Articles
-    ul
-      for article in data.articles
-        li
-          if article.title
-            a(href=`${article.link}` target='_blank')= `${article.title}`
-          else
-            a(href=`${article.link}` target='_blank')= `${article.link}`
+    
+    body
+      nav
+        ul 
+          li Impressure Tester
 
-    h3 Latest YouTube Videos
-    ul
-      for video in data.videos
-        li
-          a(href=`https://www.youtube.com/${video.link}` target='_blank')= `${video.title}`
+          div.container
+            h1=message
+
+            h2 Let's get started by setting a few configurations 
+
+            -const pugConfig = {checkboxes:{"mobile": "Open link in mobile view","integrations": "Get a log of integrations"}}
+              form(id="configForm" action="")
+                h3 What link(s) are you trying to test?
+                p separate links with commas 
+                input(type="text" name="targetLink" maxlength=5000 id="linksToTarget")
+                h3 Integratiions you want to see the post + response of
+                p separate integration names with commas
+                input(type="textarea" name="targetIntegrations" maxlength=5000 id="integrationsToTarget" value="Mastadon, L&C")
+                h3 Other configuration settings
+                p uncheck any that you wish to turn off
+                p It is reccomended that you keep these checked unless you know what you're doing 
+                -for (const [checkboxName, labelText] of Object.entries(pugConfig.checkboxes))
+                  input(type="checkbox" name=checkboxName checked="true")
+                  input(type="hidden" name=checkboxName )
+                  label(for=checkboxName)=`${labelText}`
+                div
+                  a(id="route-to-go" href="/go") Go
+    script(src="public/js/index.js")
+      
+          
+
+
+    

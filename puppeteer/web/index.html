@@ -1,0 +1,35 @@
+
+<html>
+  <head>
+    <title></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous"/>
+    <link rel="stylesheet" href="./public/css/main.css"/>
+    <body>
+      <nav>
+        <ul> 
+          <li>Impressure Tester</li>
+          <div class="container">
+            <h1></h1>
+            <h2>Let's get started by setting a few configurations </h2>
+            <form>
+              <h3>What link(s) are you trying to test?</h3>
+              <p>separate links with commas </p>
+              <input type="textarea" name="linksToTarget" maxlength="5000" id="linksToTarget"/>
+              <h3>Integratiions you want to see the post + response of</h3>
+              <p>separate integration names with commas</p>
+              <input type="textarea" name="integrationsToTarget" maxlength="5000" id="integrationsToTarget" value="Mastadon, L&amp;C"/>
+              <h3>Other configuration settings</h3>
+              <p>uncheck any that you wish to turn off</p>
+              <p>It is reccomended that you keep these checked unless you know what you're doing </p>
+              <input type="checkbox" name="mobileOn" checked="true"/>
+              <label for="mobileOn">Open link in mobile view</label>
+              <input type="checkbox" name="integrationsOn" checked="true"/>
+              <label for="integrationsOn">Get a log of integrations</label>
+              <div><a id="route-to-go" href="/go">Go</a></div>
+            </form>
+          </div>
+        </ul>
+      </nav>
+    </body>
+  </head>
+</html>
