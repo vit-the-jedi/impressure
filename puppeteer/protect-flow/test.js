@@ -25,11 +25,11 @@ const logActions = async (action) => {
 const frameObj = {};
 //config object for our script
 const config = {
-  link: "https://preview.impressure.io/cdjvks65-protect-com",
+  link: "https://preview.impressure.io/jvb5zw7a-featuredform-com",
   mobile: "on",
   integrations: "on",
   targetIntegrations: ["Mastadon", "L&C"],
-  noBrowser: false,
+  noBrowser: true,
   fakePerson: {
     email: "puppeteerProtectTe@st.com",
     "first name": "Test",
