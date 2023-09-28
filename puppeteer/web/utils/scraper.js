@@ -3,6 +3,8 @@ const puppeteer = require("puppeteer");
 const randomDob = require("./randomDob");
 const integrationMethods = require("./integrationMethods");
 
+const integrationResponseArray = [];
+
 //helper functions to step through the page
 //this function is recursive, and continues to call itself until passed a param of continue =false
 
@@ -133,6 +135,9 @@ const runPageChecks = async (config, name, page, impressureFrameContent) => {
         );
         pageLogicObj.continue = true;
         pageLogicObj.submit = true;
+        if (config.integrations === "on") {
+            interceptIntegrationsPost(page);
+        }
         return pageLogicObj;
     } else if (name.includes("offers")) {
         pageLogicObj.continue = false;
@@ -239,7 +244,7 @@ async function inputValueHelper(labels, page, name, iframe, config) {
                                     .click();
                         });
                     });
-                } catch (error) {}
+                } catch (error) { }
             }
         }
     } catch (error) {
@@ -275,22 +280,64 @@ const generateRandomDOBValue = async (type) => {
         resolve(finalValue);
     });
 };
+
+async function registerWebSocketListener(page) {
+    console.log("setting up listener");
+    const cdp = await page.target().createCDPSession();
+    await cdp.send('Network.enable');
+    await cdp.send('Page.enable');
+
+    const saveWebSocketResponses = responseObj => {
+        //look at this again to drill further down into bids responses
+        const integrationResponse = responseObj.response;
+        if (integrationResponse.payloadData.includes("integration")) {
+            const dataObj = JSON.parse(integrationResponse.payloadData);
+            const jsonData = JSON.parse(dataObj.data);
+            jsonData.values.forEach((value, index, arr) => {
+                integrationResponseArray.push(value);
+            })
+        }
+        // console.log(integrationResponseArray);
+    }
+    cdp.on('Network.webSocketFrameSent', saveWebSocketResponses);
+    cdp.on('Network.webSocketFrameReceived', saveWebSocketResponses);
+}
+
+const interceptIntegrationsPost = async (page) => {
+    await page.setRequestInterception(true);
+    page.on('requestfinished', async (request) => {
+        const response = await request.response();
+
+        const responseHeaders = response.headers();
+        console.log(response.url());
+        let responseBody;
+        //if (request.redirectChain().length === 0) {
+        // Because body can only be accessed for non-redirect responses.
+        // if (request.url().includes('desiredrequest.json')) {
+        //     responseBody = await response.buffer();
+        // }
+        //}
+        // You now have a buffer of your response, you can then convert it to string :
+        //console.log(responseBody.toString());
+
+        request.continue()
+    });
+}
 //controller function that waits for the pageLogic function to resolve
 const controller = async (config) => {
     pageLogicObj = {};
-    console.log("waiting");
-
+    console.log("waiting yoooo");
+    //run page logic to step through form
     const integrationsGathered = await pageLogic(config);
-    return integrationsGathered;
+    console.log(integrationsGathered);
 };
-
 //function that steps through the form and resolves once the integration responses are resolved
 async function pageLogic(config) {
     const browser = await puppeteer.launch({
         headless: false,
         slowMo: 0,
     });
-    const page = await browser.newPage();
+    const page = (await browser.pages())[0];
     await page.goto(config.link);
     const iframe = await page.$("#impressure-1");
     const impressureFrameContent = await iframe.contentFrame();
@@ -307,53 +354,15 @@ async function pageLogic(config) {
         );
     }
     await initConfig(config, page);
+    //register websocket listener for integration post
+    await registerWebSocketListener(page);
+    console.log("moving on");
     await getPageName(config, page, impressureFrameContent);
-    //this is working, returning the integration responses once finished.
-    //now we just need to build from here to go through the page + then resolve the responses
-    return new Promise((resolve) => {
-        const responses = [];
-        let integrationsProcessed = 0;
-        page.on("console", async (msg) => {
-            try {
-                let msgText = msg.text();
-                for (const integrationName of integratonsToTarget) {
-                    if (msgText.includes(integrationName)) {
-                        const args = msg.args();
-                        const vals = [];
-                        for (let i = 0; i < args.length; i++) {
-                            vals.push(await args[i].jsonValue());
-                        }
-
-                        const cleanedVals = await cleanIntegrations(vals);
-                        responses.push(cleanedVals);
-                        setTimeout(() => {
-                            integrationsProcessed++;
-                            if (
-                                integrationsProcessed >=
-                                config.targetIntegrations.length * 2
-                            ) {
-                                //this is working, but we are getting "resolved on server[object Object],[object Object],[object Object],[object Object]"
-                                //from the server.js log of the data - need to make sure this is getting passed in a way that we can read it
-                                //on server.js
-                                resolve(responses);
-                                //close browser after we've resolved to the server
-                                (async () => {
-                                    await browser.close();
-                                })();
-                            }
-                        }, 1000);
-                    }
-                }
-            } catch (error) {
-                console.log(error);
-            }
-        });
-    });
 }
 const cleanIntegrations = (values) => {
     const integrationObj = {};
     //set integration name
-    const intergrationObjKey = values[0];
+    const intergrationObjKey = values.data;
     for (let i = 0; i < values.length; i++) {
         const objValue = values[i];
         if (typeof objValue === "object") {

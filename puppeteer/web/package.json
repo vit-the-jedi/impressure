@@ -1,16 +1,22 @@
 {
-    "name": "impressure-web",
-    "version": "1.0.0",
-    "description": "",
-    "main": "test.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "author": "Matt Vitello",
-    "license": "ISC",
-    "dependencies": {
-        "express": "^4.18.2",
-        "pug": "^3.0.2",
-        "puppeteer": "^19.7.2"
-    }
+  "name": "impressure-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon --ext .js"
+  },
+  "author": "Matt Vitello",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "pug": "^3.0.2",
+    "puppeteer": "^19.7.2"
+  },
+  "devDependencies": {
+    "connect-livereload": "^0.6.1",
+    "livereload": "^0.9.3",
+    "nodemon": "^3.0.1"
+  }
 }

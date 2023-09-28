@@ -3,6 +3,22 @@ const express = require("express");
 const scraper = require("./utils/scraper");
 const app = express();
 
+//live reload express server on code changes
+const livereload = require("livereload");
+const connectLiveReload = require("connect-livereload");
+
+//use live reload
+app.use(connectLiveReload());
+
+
+const liveReloadServer = livereload.createServer();
+liveReloadServer.server.once("connection", (res) => {
+    setTimeout(() => {
+        liveReloadServer.refresh("/iframe");
+    }, 100);
+});
+
+
 app.set("view engine", "pug");
 //config object for our script
 const config = {
@@ -27,6 +43,11 @@ const config = {
     slowMo: 0,
 };
 app.get("/", (req, res) => {
+    res.render("index");
+});
+
+app.get("/iframe", (req, res) => {
+
     const pageIntegrationResponses = new Promise((resolve, reject) => {
         scraper
             .controller(config)
@@ -39,12 +60,14 @@ app.get("/", (req, res) => {
                 reject("Impressure scrape failed");
             })
             .then((data) => {
-                // res.render("index", {
-                //     data: { articles: data[0], videos: data[1] },
-                // });
+                //inject text into iframe
+                res.render("iframe", {
+                    data: { text: "hello in iframe" }
+                })
             })
             .catch((err) => res.status(500).send(err));
     });
-});
 
-app.listen(process.env.PORT || 2000);
+})
+
+app.listen(process.env.PORT || 2001);
